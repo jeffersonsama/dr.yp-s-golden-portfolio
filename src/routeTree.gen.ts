@@ -17,6 +17,9 @@ import { Route as AProposRouteImport } from './routes/a-propos'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AuthenticatedAdminRealisationsRouteImport } from './routes/_authenticated/admin.realisations'
+import { Route as AuthenticatedAdminProfilRouteImport } from './routes/_authenticated/admin.profil'
+import { Route as AuthenticatedAdminMessagesRouteImport } from './routes/_authenticated/admin.messages'
 
 const ServicesRoute = ServicesRouteImport.update({
   id: '/services',
@@ -57,6 +60,24 @@ const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAdminRealisationsRoute =
+  AuthenticatedAdminRealisationsRouteImport.update({
+    id: '/realisations',
+    path: '/realisations',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminProfilRoute =
+  AuthenticatedAdminProfilRouteImport.update({
+    id: '/profil',
+    path: '/profil',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminMessagesRoute =
+  AuthenticatedAdminMessagesRouteImport.update({
+    id: '/messages',
+    path: '/messages',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -65,7 +86,10 @@ export interface FileRoutesByFullPath {
   '/contact': typeof ContactRoute
   '/realisations': typeof RealisationsRoute
   '/services': typeof ServicesRoute
-  '/admin': typeof AuthenticatedAdminRoute
+  '/admin': typeof AuthenticatedAdminRouteWithChildren
+  '/admin/messages': typeof AuthenticatedAdminMessagesRoute
+  '/admin/profil': typeof AuthenticatedAdminProfilRoute
+  '/admin/realisations': typeof AuthenticatedAdminRealisationsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -74,7 +98,10 @@ export interface FileRoutesByTo {
   '/contact': typeof ContactRoute
   '/realisations': typeof RealisationsRoute
   '/services': typeof ServicesRoute
-  '/admin': typeof AuthenticatedAdminRoute
+  '/admin': typeof AuthenticatedAdminRouteWithChildren
+  '/admin/messages': typeof AuthenticatedAdminMessagesRoute
+  '/admin/profil': typeof AuthenticatedAdminProfilRoute
+  '/admin/realisations': typeof AuthenticatedAdminRealisationsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -85,7 +112,10 @@ export interface FileRoutesById {
   '/contact': typeof ContactRoute
   '/realisations': typeof RealisationsRoute
   '/services': typeof ServicesRoute
-  '/_authenticated/admin': typeof AuthenticatedAdminRoute
+  '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
+  '/_authenticated/admin/messages': typeof AuthenticatedAdminMessagesRoute
+  '/_authenticated/admin/profil': typeof AuthenticatedAdminProfilRoute
+  '/_authenticated/admin/realisations': typeof AuthenticatedAdminRealisationsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -97,6 +127,9 @@ export interface FileRouteTypes {
     | '/realisations'
     | '/services'
     | '/admin'
+    | '/admin/messages'
+    | '/admin/profil'
+    | '/admin/realisations'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -106,6 +139,9 @@ export interface FileRouteTypes {
     | '/realisations'
     | '/services'
     | '/admin'
+    | '/admin/messages'
+    | '/admin/profil'
+    | '/admin/realisations'
   id:
     | '__root__'
     | '/'
@@ -116,6 +152,9 @@ export interface FileRouteTypes {
     | '/realisations'
     | '/services'
     | '/_authenticated/admin'
+    | '/_authenticated/admin/messages'
+    | '/_authenticated/admin/profil'
+    | '/_authenticated/admin/realisations'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -186,15 +225,51 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin/realisations': {
+      id: '/_authenticated/admin/realisations'
+      path: '/realisations'
+      fullPath: '/admin/realisations'
+      preLoaderRoute: typeof AuthenticatedAdminRealisationsRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/profil': {
+      id: '/_authenticated/admin/profil'
+      path: '/profil'
+      fullPath: '/admin/profil'
+      preLoaderRoute: typeof AuthenticatedAdminProfilRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/messages': {
+      id: '/_authenticated/admin/messages'
+      path: '/messages'
+      fullPath: '/admin/messages'
+      preLoaderRoute: typeof AuthenticatedAdminMessagesRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
   }
 }
 
+interface AuthenticatedAdminRouteChildren {
+  AuthenticatedAdminMessagesRoute: typeof AuthenticatedAdminMessagesRoute
+  AuthenticatedAdminProfilRoute: typeof AuthenticatedAdminProfilRoute
+  AuthenticatedAdminRealisationsRoute: typeof AuthenticatedAdminRealisationsRoute
+}
+
+const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
+  AuthenticatedAdminMessagesRoute: AuthenticatedAdminMessagesRoute,
+  AuthenticatedAdminProfilRoute: AuthenticatedAdminProfilRoute,
+  AuthenticatedAdminRealisationsRoute: AuthenticatedAdminRealisationsRoute,
+}
+
+const AuthenticatedAdminRouteWithChildren =
+  AuthenticatedAdminRoute._addFileChildren(AuthenticatedAdminRouteChildren)
+
 interface AuthenticatedRouteRouteChildren {
-  AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
+  AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
-  AuthenticatedAdminRoute: AuthenticatedAdminRoute,
+  AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
 }
 
 const AuthenticatedRouteRouteWithChildren =

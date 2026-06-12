@@ -9,38 +9,208 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ServicesRouteImport } from './routes/services'
+import { Route as RealisationsRouteImport } from './routes/realisations'
+import { Route as ContactRouteImport } from './routes/contact'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AProposRouteImport } from './routes/a-propos'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AuthenticatedAdminRealisationsRouteImport } from './routes/_authenticated/admin.realisations'
+import { Route as AuthenticatedAdminProfilRouteImport } from './routes/_authenticated/admin.profil'
+import { Route as AuthenticatedAdminMessagesRouteImport } from './routes/_authenticated/admin.messages'
 
+const ServicesRoute = ServicesRouteImport.update({
+  id: '/services',
+  path: '/services',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RealisationsRoute = RealisationsRouteImport.update({
+  id: '/realisations',
+  path: '/realisations',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContactRoute = ContactRouteImport.update({
+  id: '/contact',
+  path: '/contact',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AProposRoute = AProposRouteImport.update({
+  id: '/a-propos',
+  path: '/a-propos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAdminRealisationsRoute =
+  AuthenticatedAdminRealisationsRouteImport.update({
+    id: '/realisations',
+    path: '/realisations',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminProfilRoute =
+  AuthenticatedAdminProfilRouteImport.update({
+    id: '/profil',
+    path: '/profil',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminMessagesRoute =
+  AuthenticatedAdminMessagesRouteImport.update({
+    id: '/messages',
+    path: '/messages',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/a-propos': typeof AProposRoute
+  '/auth': typeof AuthRoute
+  '/contact': typeof ContactRoute
+  '/realisations': typeof RealisationsRoute
+  '/services': typeof ServicesRoute
+  '/admin': typeof AuthenticatedAdminRouteWithChildren
+  '/admin/messages': typeof AuthenticatedAdminMessagesRoute
+  '/admin/profil': typeof AuthenticatedAdminProfilRoute
+  '/admin/realisations': typeof AuthenticatedAdminRealisationsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/a-propos': typeof AProposRoute
+  '/auth': typeof AuthRoute
+  '/contact': typeof ContactRoute
+  '/realisations': typeof RealisationsRoute
+  '/services': typeof ServicesRoute
+  '/admin': typeof AuthenticatedAdminRouteWithChildren
+  '/admin/messages': typeof AuthenticatedAdminMessagesRoute
+  '/admin/profil': typeof AuthenticatedAdminProfilRoute
+  '/admin/realisations': typeof AuthenticatedAdminRealisationsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/a-propos': typeof AProposRoute
+  '/auth': typeof AuthRoute
+  '/contact': typeof ContactRoute
+  '/realisations': typeof RealisationsRoute
+  '/services': typeof ServicesRoute
+  '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
+  '/_authenticated/admin/messages': typeof AuthenticatedAdminMessagesRoute
+  '/_authenticated/admin/profil': typeof AuthenticatedAdminProfilRoute
+  '/_authenticated/admin/realisations': typeof AuthenticatedAdminRealisationsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/a-propos'
+    | '/auth'
+    | '/contact'
+    | '/realisations'
+    | '/services'
+    | '/admin'
+    | '/admin/messages'
+    | '/admin/profil'
+    | '/admin/realisations'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/a-propos'
+    | '/auth'
+    | '/contact'
+    | '/realisations'
+    | '/services'
+    | '/admin'
+    | '/admin/messages'
+    | '/admin/profil'
+    | '/admin/realisations'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/a-propos'
+    | '/auth'
+    | '/contact'
+    | '/realisations'
+    | '/services'
+    | '/_authenticated/admin'
+    | '/_authenticated/admin/messages'
+    | '/_authenticated/admin/profil'
+    | '/_authenticated/admin/realisations'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AProposRoute: typeof AProposRoute
+  AuthRoute: typeof AuthRoute
+  ContactRoute: typeof ContactRoute
+  RealisationsRoute: typeof RealisationsRoute
+  ServicesRoute: typeof ServicesRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/services': {
+      id: '/services'
+      path: '/services'
+      fullPath: '/services'
+      preLoaderRoute: typeof ServicesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/realisations': {
+      id: '/realisations'
+      path: '/realisations'
+      fullPath: '/realisations'
+      preLoaderRoute: typeof RealisationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contact': {
+      id: '/contact'
+      path: '/contact'
+      fullPath: '/contact'
+      preLoaderRoute: typeof ContactRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/a-propos': {
+      id: '/a-propos'
+      path: '/a-propos'
+      fullPath: '/a-propos'
+      preLoaderRoute: typeof AProposRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,11 +218,71 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/realisations': {
+      id: '/_authenticated/admin/realisations'
+      path: '/realisations'
+      fullPath: '/admin/realisations'
+      preLoaderRoute: typeof AuthenticatedAdminRealisationsRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/profil': {
+      id: '/_authenticated/admin/profil'
+      path: '/profil'
+      fullPath: '/admin/profil'
+      preLoaderRoute: typeof AuthenticatedAdminProfilRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/messages': {
+      id: '/_authenticated/admin/messages'
+      path: '/messages'
+      fullPath: '/admin/messages'
+      preLoaderRoute: typeof AuthenticatedAdminMessagesRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
   }
 }
 
+interface AuthenticatedAdminRouteChildren {
+  AuthenticatedAdminMessagesRoute: typeof AuthenticatedAdminMessagesRoute
+  AuthenticatedAdminProfilRoute: typeof AuthenticatedAdminProfilRoute
+  AuthenticatedAdminRealisationsRoute: typeof AuthenticatedAdminRealisationsRoute
+}
+
+const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
+  AuthenticatedAdminMessagesRoute: AuthenticatedAdminMessagesRoute,
+  AuthenticatedAdminProfilRoute: AuthenticatedAdminProfilRoute,
+  AuthenticatedAdminRealisationsRoute: AuthenticatedAdminRealisationsRoute,
+}
+
+const AuthenticatedAdminRouteWithChildren =
+  AuthenticatedAdminRoute._addFileChildren(AuthenticatedAdminRouteChildren)
+
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AProposRoute: AProposRoute,
+  AuthRoute: AuthRoute,
+  ContactRoute: ContactRoute,
+  RealisationsRoute: RealisationsRoute,
+  ServicesRoute: ServicesRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

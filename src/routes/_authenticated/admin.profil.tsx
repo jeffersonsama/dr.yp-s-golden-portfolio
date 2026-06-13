@@ -35,21 +35,29 @@ function AdminProfile() {
     photo_path: null as string | null,
     social_links: { whatsapp: "", email: "", tiktok: "", instagram: "", facebook: "" },
     active_services: ["logo", "affiche", "flyer", "carte", "video"] as string[],
+    stats: { clients: 0, projects: 0, years: 0 },
   });
   const [preview, setPreview] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!data) return;
+    const s = ((data as any).stats ?? {}) as { clients?: number; projects?: number; years?: number };
     setForm({
       tagline: data.tagline,
       about: data.about,
       photo_path: (data as any).photo_path ?? null,
       social_links: data.social_links as any,
       active_services: (data.active_services as string[]) ?? [],
+      stats: {
+        clients: Number(s.clients ?? 0),
+        projects: Number(s.projects ?? 0),
+        years: Number(s.years ?? 0),
+      },
     });
     setPreview(data.photo_url ?? null);
   }, [data]);
+
 
   const onFile = async (file: File) => {
     if (file.size > 5 * 1024 * 1024) return toast.error("Max 5 Mo");
@@ -175,6 +183,25 @@ function AdminProfile() {
           </div>
         </fieldset>
 
+        <fieldset>
+          <legend className="text-[10px] uppercase tracking-[0.3em] text-gold mb-4">Statistiques (page d'accueil)</legend>
+          <div className="grid sm:grid-cols-3 gap-4">
+            {(["clients", "projects", "years"] as const).map((k) => (
+              <Field key={k} label={k === "clients" ? "Clients satisfaits" : k === "projects" ? "Projets réalisés" : "Années d'expérience"}>
+                <input
+                  type="number"
+                  min={0}
+                  value={form.stats[k]}
+                  onChange={(e) =>
+                    setForm({ ...form, stats: { ...form.stats, [k]: Number(e.target.value) || 0 } })
+                  }
+                  className="w-full bg-transparent hairline px-3 py-2 text-sm focus:border-gold focus:outline-none"
+                />
+              </Field>
+            ))}
+          </div>
+        </fieldset>
+
         <button
           type="submit"
           disabled={saving}
@@ -182,6 +209,7 @@ function AdminProfile() {
         >
           {saving ? "Enregistrement…" : "Enregistrer"}
         </button>
+
       </form>
     </AdminShell>
   );

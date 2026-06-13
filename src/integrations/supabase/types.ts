@@ -117,6 +117,7 @@ export type Database = {
           id: number
           photo_url: string | null
           social_links: Json
+          stats: Json
           tagline: string
           updated_at: string
         }
@@ -126,6 +127,7 @@ export type Database = {
           id?: number
           photo_url?: string | null
           social_links?: Json
+          stats?: Json
           tagline?: string
           updated_at?: string
         }
@@ -135,8 +137,39 @@ export type Database = {
           id?: number
           photo_url?: string | null
           social_links?: Json
+          stats?: Json
           tagline?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      testimonials: {
+        Row: {
+          approved: boolean
+          created_at: string
+          id: string
+          message: string
+          name: string
+          rating: number
+          service: string
+        }
+        Insert: {
+          approved?: boolean
+          created_at?: string
+          id?: string
+          message: string
+          name: string
+          rating?: number
+          service: string
+        }
+        Update: {
+          approved?: boolean
+          created_at?: string
+          id?: string
+          message?: string
+          name?: string
+          rating?: number
+          service?: string
         }
         Relationships: []
       }

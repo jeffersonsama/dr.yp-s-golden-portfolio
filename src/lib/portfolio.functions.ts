@@ -258,7 +258,13 @@ const profileSchema = z.object({
     facebook: z.string().max(100),
   }),
   active_services: z.array(z.enum(["logo", "affiche", "flyer", "carte", "video"])),
+  stats: z.object({
+    clients: z.number().int().min(0).max(99999),
+    projects: z.number().int().min(0).max(99999),
+    years: z.number().int().min(0).max(100),
+  }),
 });
+
 
 export const adminUpdateProfile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -274,8 +280,81 @@ export const adminUpdateProfile = createServerFn({ method: "POST" })
         photo_url: data.photo_path ?? null,
         social_links: data.social_links,
         active_services: data.active_services,
+        stats: data.stats,
       })
       .eq("id", 1);
     if (error) throw error;
     return { ok: true };
   });
+
+// ============ TESTIMONIALS ============
+
+const testimonialSchema = z.object({
+  name: z.string().trim().min(1).max(100),
+  service: z.string().trim().min(1).max(100),
+  rating: z.number().int().min(1).max(5),
+  message: z.string().trim().min(5).max(1000),
+});
+
+export const getPublicTestimonials = createServerFn({ method: "GET" }).handler(async () => {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data, error } = await supabaseAdmin
+    .from("testimonials")
+    .select("id, name, service, rating, message, created_at")
+    .eq("approved", true)
+    .order("created_at", { ascending: false })
+    .limit(20);
+  if (error) throw error;
+  return data ?? [];
+});
+
+export const submitTestimonial = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => testimonialSchema.parse(input))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("testimonials").insert({ ...data, approved: false });
+    if (error) throw error;
+    return { ok: true };
+  });
+
+export const adminListTestimonials = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await supabaseAdmin
+      .from("testimonials")
+      .select("*")
+      .order("approved", { ascending: true })
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    return data ?? [];
+  });
+
+export const adminSetTestimonialApproval = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ id: z.string().uuid(), approved: z.boolean() }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("testimonials")
+      .update({ approved: data.approved })
+      .eq("id", data.id);
+    if (error) throw error;
+    return { ok: true };
+  });
+
+export const adminDeleteTestimonial = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("testimonials").delete().eq("id", data.id);
+    if (error) throw error;
+    return { ok: true };
+  });
+

@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { SiteLayout, PageHeader, Logo } from "@/components/site-layout";
+import { Lightbox } from "@/components/lightbox";
 import { getPublicRealisations, logPortfolioView } from "@/lib/portfolio.functions";
 
 export const Route = createFileRoute("/realisations")({
@@ -31,6 +32,7 @@ function Realisations() {
   const logView = useServerFn(logPortfolioView);
   const { data } = useQuery({ queryKey: ["public-realisations"], queryFn: () => fetchAll() });
   const [cat, setCat] = useState<string>("all");
+  const [lbIndex, setLbIndex] = useState<number | null>(null);
 
   useEffect(() => {
     logView().catch(() => {});
@@ -38,9 +40,17 @@ function Realisations() {
 
   const filtered = cat === "all" ? data ?? [] : (data ?? []).filter((r) => r.category === cat);
 
+  const lbItems = filtered.map((r) => ({
+    id: r.id,
+    title: r.title,
+    category: r.category as string,
+    description: r.description ?? null,
+    image_url: r.image_url,
+  }));
+
   return (
     <SiteLayout>
-      <PageHeader eyebrow="03" title="Réalisations" subtitle="Filtre par catégorie pour explorer." />
+      <PageHeader eyebrow="03" title="Réalisations" subtitle="Cliquez sur une œuvre pour l'agrandir." />
       <section className="px-6 lg:px-12 pb-28">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-wrap gap-3 mb-12 justify-center">
@@ -66,8 +76,13 @@ function Realisations() {
             </p>
           ) : (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-              {filtered.map((r) => (
-                <figure key={r.id} className="group relative aspect-square hairline overflow-hidden">
+              {filtered.map((r, i) => (
+                <button
+                  key={r.id}
+                  onClick={() => setLbIndex(i)}
+                  className="group relative aspect-square hairline overflow-hidden text-left"
+                  aria-label={`Voir ${r.title}`}
+                >
                   {r.image_url ? (
                     <img
                       src={r.image_url}
@@ -79,20 +94,26 @@ function Realisations() {
                       <Logo className="text-5xl opacity-20" />
                     </div>
                   )}
-                  <figcaption className="absolute inset-0 bg-navy/90 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col items-center justify-center text-center p-6">
+                  <span className="absolute inset-0 bg-navy/90 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col items-center justify-center text-center p-6">
                     <span className="text-[10px] uppercase tracking-[0.35em] text-gold mb-3">{r.category}</span>
                     <span className="font-display text-xl">{r.title}</span>
                     {r.description && (
                       <p className="mt-3 text-xs text-muted-foreground font-light line-clamp-3">{r.description}</p>
                     )}
-                    <div className="mt-4 gold-divider w-10" />
-                  </figcaption>
-                </figure>
+                    <span className="mt-4 gold-divider w-10 block" />
+                    <span className="mt-4 text-[10px] uppercase tracking-[0.3em] text-gold">Agrandir +</span>
+                  </span>
+                </button>
               ))}
             </div>
           )}
         </div>
       </section>
+
+      {lbIndex !== null && (
+        <Lightbox items={lbItems} index={lbIndex} onClose={() => setLbIndex(null)} onNavigate={setLbIndex} />
+      )}
     </SiteLayout>
   );
 }
+

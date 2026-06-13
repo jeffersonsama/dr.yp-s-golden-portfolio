@@ -17,6 +17,7 @@ import { Route as AProposRouteImport } from './routes/a-propos'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AuthenticatedAdminTemoignagesRouteImport } from './routes/_authenticated/admin.temoignages'
 import { Route as AuthenticatedAdminRealisationsRouteImport } from './routes/_authenticated/admin.realisations'
 import { Route as AuthenticatedAdminProfilRouteImport } from './routes/_authenticated/admin.profil'
 import { Route as AuthenticatedAdminMessagesRouteImport } from './routes/_authenticated/admin.messages'
@@ -60,6 +61,12 @@ const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAdminTemoignagesRoute =
+  AuthenticatedAdminTemoignagesRouteImport.update({
+    id: '/temoignages',
+    path: '/temoignages',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminRealisationsRoute =
   AuthenticatedAdminRealisationsRouteImport.update({
     id: '/realisations',
@@ -90,6 +97,7 @@ export interface FileRoutesByFullPath {
   '/admin/messages': typeof AuthenticatedAdminMessagesRoute
   '/admin/profil': typeof AuthenticatedAdminProfilRoute
   '/admin/realisations': typeof AuthenticatedAdminRealisationsRoute
+  '/admin/temoignages': typeof AuthenticatedAdminTemoignagesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -102,6 +110,7 @@ export interface FileRoutesByTo {
   '/admin/messages': typeof AuthenticatedAdminMessagesRoute
   '/admin/profil': typeof AuthenticatedAdminProfilRoute
   '/admin/realisations': typeof AuthenticatedAdminRealisationsRoute
+  '/admin/temoignages': typeof AuthenticatedAdminTemoignagesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -116,6 +125,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/messages': typeof AuthenticatedAdminMessagesRoute
   '/_authenticated/admin/profil': typeof AuthenticatedAdminProfilRoute
   '/_authenticated/admin/realisations': typeof AuthenticatedAdminRealisationsRoute
+  '/_authenticated/admin/temoignages': typeof AuthenticatedAdminTemoignagesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -130,6 +140,7 @@ export interface FileRouteTypes {
     | '/admin/messages'
     | '/admin/profil'
     | '/admin/realisations'
+    | '/admin/temoignages'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -142,6 +153,7 @@ export interface FileRouteTypes {
     | '/admin/messages'
     | '/admin/profil'
     | '/admin/realisations'
+    | '/admin/temoignages'
   id:
     | '__root__'
     | '/'
@@ -155,6 +167,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/messages'
     | '/_authenticated/admin/profil'
     | '/_authenticated/admin/realisations'
+    | '/_authenticated/admin/temoignages'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -225,6 +238,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin/temoignages': {
+      id: '/_authenticated/admin/temoignages'
+      path: '/temoignages'
+      fullPath: '/admin/temoignages'
+      preLoaderRoute: typeof AuthenticatedAdminTemoignagesRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/realisations': {
       id: '/_authenticated/admin/realisations'
       path: '/realisations'
@@ -253,12 +273,14 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminMessagesRoute: typeof AuthenticatedAdminMessagesRoute
   AuthenticatedAdminProfilRoute: typeof AuthenticatedAdminProfilRoute
   AuthenticatedAdminRealisationsRoute: typeof AuthenticatedAdminRealisationsRoute
+  AuthenticatedAdminTemoignagesRoute: typeof AuthenticatedAdminTemoignagesRoute
 }
 
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminMessagesRoute: AuthenticatedAdminMessagesRoute,
   AuthenticatedAdminProfilRoute: AuthenticatedAdminProfilRoute,
   AuthenticatedAdminRealisationsRoute: AuthenticatedAdminRealisationsRoute,
+  AuthenticatedAdminTemoignagesRoute: AuthenticatedAdminTemoignagesRoute,
 }
 
 const AuthenticatedAdminRouteWithChildren =
@@ -287,13 +309,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

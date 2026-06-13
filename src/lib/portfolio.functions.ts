@@ -258,7 +258,13 @@ const profileSchema = z.object({
     facebook: z.string().max(100),
   }),
   active_services: z.array(z.enum(["logo", "affiche", "flyer", "carte", "video"])),
+  stats: z.object({
+    clients: z.number().int().min(0).max(99999),
+    projects: z.number().int().min(0).max(99999),
+    years: z.number().int().min(0).max(100),
+  }),
 });
+
 
 export const adminUpdateProfile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

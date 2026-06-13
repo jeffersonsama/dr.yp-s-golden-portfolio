@@ -1,7 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { useState } from "react";
 import { SiteLayout, Logo } from "@/components/site-layout";
+import { Lightbox } from "@/components/lightbox";
+import { StatsSection } from "@/components/stats-section";
+import { TestimonialsSection } from "@/components/testimonials-section";
 import { getFeaturedRealisations, getSiteProfile } from "@/lib/portfolio.functions";
 
 export const Route = createFileRoute("/")({
@@ -21,6 +25,17 @@ function Home() {
   const fetchProfile = useServerFn(getSiteProfile);
   const { data: featured } = useQuery({ queryKey: ["featured"], queryFn: () => fetchFeatured() });
   const { data: profile } = useQuery({ queryKey: ["profile"], queryFn: () => fetchProfile() });
+  const [lbIndex, setLbIndex] = useState<number | null>(null);
+
+  const stats = (profile as any)?.stats as { clients?: number; projects?: number; years?: number } | undefined;
+
+  const lbItems = (featured ?? []).map((r) => ({
+    id: r.id,
+    title: r.title,
+    category: r.category as string,
+    description: (r as any).description ?? null,
+    image_url: r.image_url,
+  }));
 
   return (
     <SiteLayout>
@@ -56,6 +71,8 @@ function Home() {
         </div>
       </section>
 
+      <StatsSection stats={stats} />
+
       {featured && featured.length > 0 && (
         <section className="py-28 px-6 lg:px-12">
           <div className="max-w-7xl mx-auto">
@@ -69,8 +86,12 @@ function Home() {
               </Link>
             </div>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {featured.slice(0, 6).map((r) => (
-                <figure key={r.id} className="group relative aspect-square hairline overflow-hidden">
+              {featured.slice(0, 6).map((r, i) => (
+                <button
+                  key={r.id}
+                  onClick={() => setLbIndex(i)}
+                  className="group relative aspect-square hairline overflow-hidden text-left"
+                >
                   {r.image_url ? (
                     <img
                       src={r.image_url}
@@ -82,15 +103,21 @@ function Home() {
                       <Logo className="text-5xl opacity-20" />
                     </div>
                   )}
-                  <figcaption className="absolute inset-0 bg-navy/85 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col items-center justify-center text-center p-4">
+                  <span className="absolute inset-0 bg-navy/85 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col items-center justify-center text-center p-4">
                     <span className="text-[10px] uppercase tracking-[0.35em] text-gold mb-2">{r.category}</span>
                     <span className="font-display text-lg">{r.title}</span>
-                  </figcaption>
-                </figure>
+                  </span>
+                </button>
               ))}
             </div>
           </div>
         </section>
+      )}
+
+      <TestimonialsSection />
+
+      {lbIndex !== null && (
+        <Lightbox items={lbItems} index={lbIndex} onClose={() => setLbIndex(null)} onNavigate={setLbIndex} />
       )}
     </SiteLayout>
   );

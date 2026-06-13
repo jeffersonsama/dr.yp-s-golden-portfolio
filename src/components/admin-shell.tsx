@@ -10,9 +10,11 @@ import { toast } from "sonner";
 const NAV = [
   { to: "/admin", label: "Tableau de bord" },
   { to: "/admin/realisations", label: "Réalisations" },
+  { to: "/admin/temoignages", label: "Témoignages" },
   { to: "/admin/messages", label: "Messages" },
   { to: "/admin/profil", label: "Profil" },
 ] as const;
+
 
 export function AdminShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();

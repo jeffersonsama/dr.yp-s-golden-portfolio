@@ -31,9 +31,11 @@ function Dashboard() {
 
       <div className="flex flex-wrap gap-3 mb-14">
         <QuickLink to="/admin/realisations">+ Ajouter une réalisation</QuickLink>
+        <QuickLink to="/admin/temoignages">Modérer les avis</QuickLink>
         <QuickLink to="/admin/messages">Voir les messages</QuickLink>
         <QuickLink to="/admin/profil">Modifier le profil</QuickLink>
       </div>
+
 
       <div>
         <p className="text-[11px] uppercase tracking-[0.3em] text-gold mb-6">Dernière activité</p>

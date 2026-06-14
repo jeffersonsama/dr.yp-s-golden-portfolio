@@ -124,16 +124,33 @@ function AuthPage() {
             {loading ? "…" : mode === "signup" ? "Créer le compte" : "Se connecter"}
           </button>
 
-          {existsData?.exists === false && (
+          {existsData?.exists === false && mode === "signup" && (
             <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground text-center">
               Aucun admin — premier compte = vous
             </p>
           )}
-          {existsData?.exists && (
-            <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground text-center">
-              Inscription verrouillée. Connexion uniquement.
-            </p>
-          )}
+
+          <div className="text-center pt-2">
+            {mode === "login" ? (
+              !existsData?.exists && (
+                <button
+                  type="button"
+                  onClick={() => setMode("signup")}
+                  className="text-[10px] uppercase tracking-[0.3em] text-gold hover:underline"
+                >
+                  Créer le compte admin
+                </button>
+              )
+            ) : (
+              <button
+                type="button"
+                onClick={() => setMode("login")}
+                className="text-[10px] uppercase tracking-[0.3em] text-gold hover:underline"
+              >
+                J'ai déjà un compte — Se connecter
+              </button>
+            )}
+          </div>
         </form>
       </div>
     </div>

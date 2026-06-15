@@ -14,6 +14,34 @@ async function signImageUrls(rows: Array<{ image_path: string | null }>) {
   return map;
 }
 
+async function signPaths(paths: string[]) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  if (paths.length === 0) return new Map<string, string>();
+  const { data } = await supabaseAdmin.storage.from("portfolio").createSignedUrls(paths, SIGN_EXPIRES);
+  const map = new Map<string, string>();
+  data?.forEach((d) => d.signedUrl && d.path && map.set(d.path, d.signedUrl));
+  return map;
+}
+
+async function attachGallery<T extends { id: string }>(rows: T[]) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  if (rows.length === 0) return rows.map((r) => ({ ...r, gallery: [] as Array<{ id: string; image_path: string; image_url: string | null; caption: string | null; sort_order: number }> }));
+  const ids = rows.map((r) => r.id);
+  const { data: imgs } = await supabaseAdmin
+    .from("realisation_images")
+    .select("id, realisation_id, image_path, caption, sort_order")
+    .in("realisation_id", ids)
+    .order("sort_order", { ascending: true });
+  const urls = await signPaths((imgs ?? []).map((i) => i.image_path));
+  const byId = new Map<string, any[]>();
+  (imgs ?? []).forEach((i) => {
+    const list = byId.get(i.realisation_id) ?? [];
+    list.push({ id: i.id, image_path: i.image_path, image_url: urls.get(i.image_path) ?? null, caption: i.caption, sort_order: i.sort_order });
+    byId.set(i.realisation_id, list);
+  });
+  return rows.map((r) => ({ ...r, gallery: byId.get(r.id) ?? [] }));
+}
+
 // ============ PUBLIC ============
 
 export const getSiteProfile = createServerFn({ method: "GET" }).handler(async () => {
@@ -32,13 +60,14 @@ export const getPublicRealisations = createServerFn({ method: "GET" }).handler(a
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data, error } = await supabaseAdmin
     .from("realisations")
-    .select("id, title, category, description, image_path, featured, date_month, date_year, created_at")
+    .select("id, title, category, description, image_path, featured, date_month, date_year, created_at, sort_order")
     .eq("status", "published")
-    .order("featured", { ascending: false })
+    .order("sort_order", { ascending: true })
     .order("created_at", { ascending: false });
   if (error) throw error;
   const urls = await signImageUrls(data ?? []);
-  return (data ?? []).map((r) => ({ ...r, image_url: r.image_path ? urls.get(r.image_path) ?? null : null }));
+  const withMain = (data ?? []).map((r) => ({ ...r, image_url: r.image_path ? urls.get(r.image_path) ?? null : null }));
+  return await attachGallery(withMain);
 });
 
 export const getFeaturedRealisations = createServerFn({ method: "GET" }).handler(async () => {
@@ -48,7 +77,7 @@ export const getFeaturedRealisations = createServerFn({ method: "GET" }).handler
     .select("id, title, category, image_path")
     .eq("status", "published")
     .order("featured", { ascending: false })
-    .order("created_at", { ascending: false })
+    .order("sort_order", { ascending: true })
     .limit(6);
   const urls = await signImageUrls(data ?? []);
   return (data ?? []).map((r) => ({ ...r, image_url: r.image_path ? urls.get(r.image_path) ?? null : null }));
@@ -148,12 +177,18 @@ export const adminListRealisations = createServerFn({ method: "GET" })
     const { data, error } = await supabaseAdmin
       .from("realisations")
       .select("*")
-      .order("featured", { ascending: false })
+      .order("sort_order", { ascending: true })
       .order("created_at", { ascending: false });
     if (error) throw error;
     const urls = await signImageUrls(data ?? []);
-    return (data ?? []).map((r) => ({ ...r, image_url: r.image_path ? urls.get(r.image_path) ?? null : null }));
+    const withMain = (data ?? []).map((r) => ({ ...r, image_url: r.image_path ? urls.get(r.image_path) ?? null : null }));
+    return await attachGallery(withMain);
   });
+
+const galleryItemSchema = z.object({
+  image_path: z.string().min(1),
+  caption: z.string().max(500).optional().nullable(),
+});
 
 const realisationSchema = z.object({
   id: z.string().uuid().optional(),
@@ -165,6 +200,7 @@ const realisationSchema = z.object({
   featured: z.boolean(),
   date_month: z.number().int().min(1).max(12).optional().nullable(),
   date_year: z.number().int().min(2000).max(2100).optional().nullable(),
+  gallery: z.array(galleryItemSchema).max(20).optional().default([]),
 });
 
 export const adminUpsertRealisation = createServerFn({ method: "POST" })
@@ -173,11 +209,59 @@ export const adminUpsertRealisation = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    if (data.id) {
-      const { error } = await supabaseAdmin.from("realisations").update(data).eq("id", data.id);
+    const { gallery, id, ...payload } = data;
+    let realId = id;
+    if (id) {
+      const { error } = await supabaseAdmin.from("realisations").update(payload).eq("id", id);
       if (error) throw error;
     } else {
-      const { error } = await supabaseAdmin.from("realisations").insert({ ...data, image_url: data.image_path });
+      // place new at top
+      const { data: minRow } = await supabaseAdmin
+        .from("realisations")
+        .select("sort_order")
+        .order("sort_order", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      const newOrder = (minRow?.sort_order ?? 0) - 1;
+      const { data: inserted, error } = await supabaseAdmin
+        .from("realisations")
+        .insert({ ...payload, image_url: payload.image_path, sort_order: newOrder })
+        .select("id")
+        .single();
+      if (error) throw error;
+      realId = inserted.id;
+    }
+    // sync gallery: replace all
+    if (realId) {
+      await supabaseAdmin.from("realisation_images").delete().eq("realisation_id", realId);
+      if (gallery && gallery.length > 0) {
+        const rows = gallery.map((g, i) => ({
+          realisation_id: realId!,
+          image_path: g.image_path,
+          caption: g.caption ?? null,
+          sort_order: i,
+        }));
+        const { error: galErr } = await supabaseAdmin.from("realisation_images").insert(rows);
+        if (galErr) throw galErr;
+      }
+    }
+    return { ok: true, id: realId };
+  });
+
+export const adminReorderRealisations = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ ids: z.array(z.string().uuid()).min(1).max(500) }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // sequential updates (fine for <500 items)
+    for (let i = 0; i < data.ids.length; i++) {
+      const { error } = await supabaseAdmin
+        .from("realisations")
+        .update({ sort_order: i })
+        .eq("id", data.ids[i]);
       if (error) throw error;
     }
     return { ok: true };
@@ -194,8 +278,16 @@ export const adminDeleteRealisation = createServerFn({ method: "POST" })
       .select("image_path")
       .eq("id", data.id)
       .single();
-    if (row?.image_path) {
-      await supabaseAdmin.storage.from("portfolio").remove([row.image_path]);
+    const { data: galImgs } = await supabaseAdmin
+      .from("realisation_images")
+      .select("image_path")
+      .eq("realisation_id", data.id);
+    const paths = [
+      ...(row?.image_path ? [row.image_path] : []),
+      ...((galImgs ?? []).map((g) => g.image_path)),
+    ];
+    if (paths.length > 0) {
+      await supabaseAdmin.storage.from("portfolio").remove(paths);
     }
     const { error } = await supabaseAdmin.from("realisations").delete().eq("id", data.id);
     if (error) throw error;
@@ -294,18 +386,24 @@ const testimonialSchema = z.object({
   service: z.string().trim().min(1).max(100),
   rating: z.number().int().min(1).max(5),
   message: z.string().trim().min(5).max(1000),
+  proof_image_paths: z.array(z.string().min(1)).max(3).optional().default([]),
 });
 
 export const getPublicTestimonials = createServerFn({ method: "GET" }).handler(async () => {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data, error } = await supabaseAdmin
     .from("testimonials")
-    .select("id, name, service, rating, message, created_at")
+    .select("id, name, service, rating, message, created_at, proof_image_paths")
     .eq("approved", true)
     .order("created_at", { ascending: false })
     .limit(20);
   if (error) throw error;
-  return data ?? [];
+  const allPaths = (data ?? []).flatMap((t) => t.proof_image_paths ?? []);
+  const urls = await signPaths(allPaths);
+  return (data ?? []).map((t) => ({
+    ...t,
+    proof_image_urls: (t.proof_image_paths ?? []).map((p: string) => urls.get(p) ?? null).filter(Boolean) as string[],
+  }));
 });
 
 export const submitTestimonial = createServerFn({ method: "POST" })
@@ -328,7 +426,12 @@ export const adminListTestimonials = createServerFn({ method: "GET" })
       .order("approved", { ascending: true })
       .order("created_at", { ascending: false });
     if (error) throw error;
-    return data ?? [];
+    const allPaths = (data ?? []).flatMap((t: any) => t.proof_image_paths ?? []);
+    const urls = await signPaths(allPaths);
+    return (data ?? []).map((t: any) => ({
+      ...t,
+      proof_image_urls: (t.proof_image_paths ?? []).map((p: string) => urls.get(p) ?? null).filter(Boolean) as string[],
+    }));
   });
 
 export const adminSetTestimonialApproval = createServerFn({ method: "POST" })
@@ -353,8 +456,16 @@ export const adminDeleteTestimonial = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: row } = await supabaseAdmin
+      .from("testimonials")
+      .select("proof_image_paths")
+      .eq("id", data.id)
+      .maybeSingle();
+    const paths: string[] = (row as any)?.proof_image_paths ?? [];
+    if (paths.length > 0) {
+      await supabaseAdmin.storage.from("portfolio").remove(paths);
+    }
     const { error } = await supabaseAdmin.from("testimonials").delete().eq("id", data.id);
     if (error) throw error;
     return { ok: true };
   });
-

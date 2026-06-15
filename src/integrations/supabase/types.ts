@@ -62,6 +62,41 @@ export type Database = {
         }
         Relationships: []
       }
+      realisation_images: {
+        Row: {
+          caption: string | null
+          created_at: string
+          id: string
+          image_path: string
+          realisation_id: string
+          sort_order: number
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          id?: string
+          image_path: string
+          realisation_id: string
+          sort_order?: number
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          id?: string
+          image_path?: string
+          realisation_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "realisation_images_realisation_id_fkey"
+            columns: ["realisation_id"]
+            isOneToOne: false
+            referencedRelation: "realisations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       realisations: {
         Row: {
           category: Database["public"]["Enums"]["realisation_category"]
@@ -73,6 +108,7 @@ export type Database = {
           id: string
           image_path: string | null
           image_url: string
+          sort_order: number
           status: Database["public"]["Enums"]["realisation_status"]
           title: string
           updated_at: string
@@ -88,6 +124,7 @@ export type Database = {
           id?: string
           image_path?: string | null
           image_url: string
+          sort_order?: number
           status?: Database["public"]["Enums"]["realisation_status"]
           title: string
           updated_at?: string
@@ -103,6 +140,7 @@ export type Database = {
           id?: string
           image_path?: string | null
           image_url?: string
+          sort_order?: number
           status?: Database["public"]["Enums"]["realisation_status"]
           title?: string
           updated_at?: string
@@ -150,6 +188,7 @@ export type Database = {
           id: string
           message: string
           name: string
+          proof_image_paths: string[]
           rating: number
           service: string
         }
@@ -159,6 +198,7 @@ export type Database = {
           id?: string
           message: string
           name: string
+          proof_image_paths?: string[]
           rating?: number
           service: string
         }
@@ -168,6 +208,7 @@ export type Database = {
           id?: string
           message?: string
           name?: string
+          proof_image_paths?: string[]
           rating?: number
           service?: string
         }

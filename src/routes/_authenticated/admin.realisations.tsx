@@ -1,12 +1,31 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+  horizontalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { AdminShell, AdminPageHeader } from "@/components/admin-shell";
 import {
   adminListRealisations,
   adminUpsertRealisation,
   adminDeleteRealisation,
+  adminReorderRealisations,
 } from "@/lib/portfolio.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -17,6 +36,13 @@ export const Route = createFileRoute("/_authenticated/admin/realisations")({
   }),
   component: AdminRealisations,
 });
+
+type GalleryItem = {
+  id?: string;
+  image_path: string;
+  image_url?: string | null;
+  caption?: string | null;
+};
 
 type Real = {
   id: string;
@@ -30,6 +56,8 @@ type Real = {
   date_month: number | null;
   date_year: number | null;
   created_at: string;
+  sort_order: number;
+  gallery: GalleryItem[];
 };
 
 const CATS = [
@@ -45,15 +73,27 @@ function AdminRealisations() {
   const fetchAll = useServerFn(adminListRealisations);
   const upsert = useServerFn(adminUpsertRealisation);
   const remove = useServerFn(adminDeleteRealisation);
+  const reorder = useServerFn(adminReorderRealisations);
 
   const { data } = useQuery({ queryKey: ["admin-realisations"], queryFn: () => fetchAll() });
   const [editing, setEditing] = useState<Partial<Real> | null>(null);
   const [confirmDel, setConfirmDel] = useState<Real | null>(null);
   const [filterCat, setFilterCat] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [items, setItems] = useState<Real[]>([]);
 
-  const filtered = (data ?? []).filter(
+  useEffect(() => {
+    setItems((data ?? []) as Real[]);
+  }, [data]);
+
+  const filtered = items.filter(
     (r) => (filterCat === "all" || r.category === filterCat) && (filterStatus === "all" || r.status === filterStatus),
+  );
+  const canReorder = filterCat === "all" && filterStatus === "all";
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
   const refresh = () => qc.invalidateQueries({ queryKey: ["admin-realisations"] });
@@ -69,11 +109,27 @@ function AdminRealisations() {
     setConfirmDel(null);
   };
 
+  const onDragEnd = async (e: DragEndEvent) => {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const oldIdx = items.findIndex((i) => i.id === active.id);
+    const newIdx = items.findIndex((i) => i.id === over.id);
+    const next = arrayMove(items, oldIdx, newIdx);
+    setItems(next);
+    try {
+      await reorder({ data: { ids: next.map((i) => i.id) } });
+      qc.invalidateQueries({ queryKey: ["public-realisations"] });
+    } catch {
+      toast.error("Réordonnancement impossible.");
+      setItems(items);
+    }
+  };
+
   return (
     <AdminShell>
       <AdminPageHeader
         title="Réalisations"
-        subtitle="Gérer le catalogue affiché sur le portfolio public"
+        subtitle={canReorder ? "Glissez-déposez pour réordonner" : "Désactivez les filtres pour réordonner"}
         action={
           <button
             onClick={() =>
@@ -85,6 +141,7 @@ function AdminRealisations() {
                 featured: false,
                 date_year: new Date().getFullYear(),
                 date_month: new Date().getMonth() + 1,
+                gallery: [],
               })
             }
             className="hairline px-5 py-3 text-[11px] uppercase tracking-[0.25em] text-gold hover:bg-gold hover:text-navy transition-all"
@@ -107,72 +164,44 @@ function AdminRealisations() {
         />
       </div>
 
-      <div className="hairline overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="text-left text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
-            <tr className="border-b hairline border-x-0 border-t-0">
-              <th className="p-4">Aperçu</th>
-              <th className="p-4">Titre</th>
-              <th className="p-4">Catégorie</th>
-              <th className="p-4">Statut</th>
-              <th className="p-4">Vedette</th>
-              <th className="p-4">Date</th>
-              <th className="p-4 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((r) => (
-              <tr key={r.id} className="border-b hairline border-x-0 border-t-0 last:border-0">
-                <td className="p-4">
-                  {r.image_url ? (
-                    <img src={r.image_url} alt="" className="w-14 h-14 object-cover hairline" />
-                  ) : (
-                    <div className="w-14 h-14 bg-[#0d2a52] hairline" />
-                  )}
-                </td>
-                <td className="p-4 font-light">{r.title}</td>
-                <td className="p-4 text-muted-foreground capitalize">{r.category}</td>
-                <td className="p-4">
-                  <span
-                    className={`text-[10px] uppercase tracking-[0.2em] px-2 py-1 hairline ${
-                      r.status === "published" ? "text-gold border-gold" : "text-muted-foreground"
-                    }`}
-                  >
-                    {r.status === "published" ? "Publié" : "Brouillon"}
-                  </span>
-                </td>
-                <td className="p-4">{r.featured ? "★" : ""}</td>
-                <td className="p-4 text-muted-foreground text-xs">
-                  {r.date_month && r.date_year ? `${String(r.date_month).padStart(2, "0")}/${r.date_year}` : "—"}
-                </td>
-                <td className="p-4 text-right">
-                  <div className="inline-flex gap-2">
-                    <button
-                      onClick={() => setEditing(r)}
-                      className="text-[10px] uppercase tracking-[0.2em] text-gold hover:underline"
-                    >
-                      Modifier
-                    </button>
-                    <button
-                      onClick={() => setConfirmDel(r)}
-                      className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground hover:text-gold"
-                    >
-                      Supprimer
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {filtered.length === 0 && (
-              <tr>
-                <td colSpan={7} className="p-8 text-center text-muted-foreground text-sm">
-                  Aucune réalisation.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={canReorder ? onDragEnd : undefined}>
+        <SortableContext items={filtered.map((r) => r.id)} strategy={verticalListSortingStrategy}>
+          <div className="hairline overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="text-left text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+                <tr className="border-b hairline border-x-0 border-t-0">
+                  <th className="p-4 w-8"></th>
+                  <th className="p-4">Aperçu</th>
+                  <th className="p-4">Titre</th>
+                  <th className="p-4">Catégorie</th>
+                  <th className="p-4">Galerie</th>
+                  <th className="p-4">Statut</th>
+                  <th className="p-4">Vedette</th>
+                  <th className="p-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((r) => (
+                  <SortableRow
+                    key={r.id}
+                    r={r}
+                    canReorder={canReorder}
+                    onEdit={() => setEditing(r)}
+                    onDelete={() => setConfirmDel(r)}
+                  />
+                ))}
+                {filtered.length === 0 && (
+                  <tr>
+                    <td colSpan={8} className="p-8 text-center text-muted-foreground text-sm">
+                      Aucune réalisation.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </SortableContext>
+      </DndContext>
 
       {editing && (
         <RealisationForm
@@ -184,6 +213,7 @@ function AdminRealisations() {
               toast.success("Enregistré.");
               setEditing(null);
               refresh();
+              qc.invalidateQueries({ queryKey: ["public-realisations"] });
             } catch (e: any) {
               toast.error(e?.message ?? "Erreur");
             }
@@ -195,7 +225,7 @@ function AdminRealisations() {
         <Modal onClose={() => setConfirmDel(null)}>
           <p className="font-display text-2xl text-gold mb-4">Supprimer ?</p>
           <p className="text-sm text-muted-foreground mb-6 font-light">
-            « {confirmDel.title} » sera supprimée définitivement, image comprise.
+            « {confirmDel.title} » sera supprimée définitivement, images comprises.
           </p>
           <div className="flex justify-end gap-3">
             <button
@@ -215,6 +245,93 @@ function AdminRealisations() {
       )}
     </AdminShell>
   );
+}
+
+function SortableRow({
+  r,
+  canReorder,
+  onEdit,
+  onDelete,
+}: {
+  r: Real;
+  canReorder: boolean;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: r.id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+  return (
+    <tr ref={setNodeRef} style={style} className="border-b hairline border-x-0 border-t-0 last:border-0 bg-navy">
+      <td className="p-4">
+        {canReorder ? (
+          <button
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-gold text-lg"
+            aria-label="Réordonner"
+            title="Glisser pour réordonner"
+          >
+            ⋮⋮
+          </button>
+        ) : (
+          <span className="text-muted-foreground/30">⋮⋮</span>
+        )}
+      </td>
+      <td className="p-4">
+        {r.image_url ? (
+          <img src={r.image_url} alt="" className="w-14 h-14 object-cover hairline" />
+        ) : (
+          <div className="w-14 h-14 bg-[#0d2a52] hairline" />
+        )}
+      </td>
+      <td className="p-4 font-light">{r.title}</td>
+      <td className="p-4 text-muted-foreground capitalize">{r.category}</td>
+      <td className="p-4 text-muted-foreground text-xs">
+        {r.gallery.length > 0 ? `+${r.gallery.length}` : "—"}
+      </td>
+      <td className="p-4">
+        <span
+          className={`text-[10px] uppercase tracking-[0.2em] px-2 py-1 hairline ${
+            r.status === "published" ? "text-gold border-gold" : "text-muted-foreground"
+          }`}
+        >
+          {r.status === "published" ? "Publié" : "Brouillon"}
+        </span>
+      </td>
+      <td className="p-4">{r.featured ? "★" : ""}</td>
+      <td className="p-4 text-right">
+        <div className="inline-flex gap-2">
+          <button onClick={onEdit} className="text-[10px] uppercase tracking-[0.2em] text-gold hover:underline">
+            Modifier
+          </button>
+          <button
+            onClick={onDelete}
+            className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground hover:text-gold"
+          >
+            Supprimer
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+async function uploadOne(file: File, prefix = "") {
+  if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+    throw new Error("Format JPG, PNG ou WEBP requis.");
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    throw new Error("Maximum 5 Mo par image.");
+  }
+  const ext = file.name.split(".").pop();
+  const path = `${prefix}${crypto.randomUUID()}.${ext}`;
+  const { error } = await supabase.storage.from("portfolio").upload(path, file, { upsert: false });
+  if (error) throw error;
+  return path;
 }
 
 function RealisationForm({
@@ -238,27 +355,19 @@ function RealisationForm({
     date_year: initial.date_year ?? new Date().getFullYear(),
   });
   const [preview, setPreview] = useState<string | null>(initial.image_url ?? null);
+  const [gallery, setGallery] = useState<GalleryItem[]>(initial.gallery ?? []);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const onFile = async (file: File) => {
-    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-      toast.error("Format JPG, PNG ou WEBP requis.");
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Maximum 5 Mo.");
-      return;
-    }
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+
+  const onMainFile = async (file: File) => {
     setUploading(true);
     try {
-      const ext = file.name.split(".").pop();
-      const path = `${crypto.randomUUID()}.${ext}`;
-      const { error } = await supabase.storage.from("portfolio").upload(path, file, { upsert: false });
-      if (error) throw error;
+      const path = await uploadOne(file);
       setForm((f) => ({ ...f, image_path: path }));
       setPreview(URL.createObjectURL(file));
-      toast.success("Image téléversée.");
+      toast.success("Image principale téléversée.");
     } catch (e: any) {
       toast.error(e?.message ?? "Échec de l'upload");
     } finally {
@@ -266,14 +375,46 @@ function RealisationForm({
     }
   };
 
+  const onGalleryFiles = async (files: FileList) => {
+    if (gallery.length + files.length > 20) {
+      toast.error("Maximum 20 images dans la galerie.");
+      return;
+    }
+    setUploading(true);
+    const next: GalleryItem[] = [...gallery];
+    for (const file of Array.from(files)) {
+      try {
+        const path = await uploadOne(file, "gallery/");
+        next.push({ image_path: path, image_url: URL.createObjectURL(file), caption: "" });
+      } catch (e: any) {
+        toast.error(`${file.name} : ${e?.message ?? "échec"}`);
+      }
+    }
+    setGallery(next);
+    setUploading(false);
+  };
+
+  const removeFromGallery = (idx: number) => setGallery((g) => g.filter((_, i) => i !== idx));
+
+  const onGalleryDragEnd = (e: DragEndEvent) => {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const oldIdx = gallery.findIndex((g) => (g.image_path) === active.id);
+    const newIdx = gallery.findIndex((g) => (g.image_path) === over.id);
+    setGallery(arrayMove(gallery, oldIdx, newIdx));
+  };
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.image_path) {
-      toast.error("Image requise.");
+      toast.error("Image principale requise.");
       return;
     }
     setSaving(true);
-    await onSave(form);
+    await onSave({
+      ...form,
+      gallery: gallery.map((g) => ({ image_path: g.image_path, caption: g.caption ?? null })),
+    });
     setSaving(false);
   };
 
@@ -286,19 +427,19 @@ function RealisationForm({
 
         <div className="grid md:grid-cols-2 gap-6">
           <div>
-            <span className="block text-[10px] uppercase tracking-[0.3em] text-muted-foreground mb-2">Image</span>
+            <span className="block text-[10px] uppercase tracking-[0.3em] text-muted-foreground mb-2">Image principale</span>
             <label className="aspect-square hairline border-dashed flex items-center justify-center cursor-pointer relative overflow-hidden">
               {preview ? (
                 <img src={preview} alt="" className="absolute inset-0 w-full h-full object-cover" />
               ) : (
                 <span className="text-xs text-muted-foreground text-center px-4">
-                  {uploading ? "Téléversement…" : "Cliquer ou déposer une image (JPG/PNG/WEBP, 5 Mo max)"}
+                  {uploading ? "Téléversement…" : "Cliquer (JPG/PNG/WEBP, 5 Mo max)"}
                 </span>
               )}
               <input
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
-                onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])}
+                onChange={(e) => e.target.files?.[0] && onMainFile(e.target.files[0])}
                 className="absolute inset-0 opacity-0 cursor-pointer"
               />
             </label>
@@ -379,6 +520,44 @@ function RealisationForm({
           </div>
         </div>
 
+        {/* Gallery */}
+        <div className="pt-4 border-t hairline border-x-0 border-b-0">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
+              Galerie supplémentaire ({gallery.length}/20)
+            </span>
+            <label className="hairline px-3 py-2 text-[10px] uppercase tracking-[0.25em] text-gold hover:bg-gold hover:text-navy cursor-pointer">
+              + Ajouter des images
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                multiple
+                onChange={(e) => e.target.files && onGalleryFiles(e.target.files)}
+                className="hidden"
+              />
+            </label>
+          </div>
+
+          {gallery.length > 0 && (
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onGalleryDragEnd}>
+              <SortableContext items={gallery.map((g) => g.image_path)} strategy={horizontalListSortingStrategy}>
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                  {gallery.map((g, i) => (
+                    <GalleryTile
+                      key={g.image_path}
+                      g={g}
+                      onRemove={() => removeFromGallery(i)}
+                      onCaption={(c) =>
+                        setGallery((arr) => arr.map((x, j) => (j === i ? { ...x, caption: c } : x)))
+                      }
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
+          )}
+        </div>
+
         <div className="flex justify-end gap-3 pt-4">
           <button
             type="button"
@@ -397,6 +576,49 @@ function RealisationForm({
         </div>
       </form>
     </Modal>
+  );
+}
+
+function GalleryTile({
+  g,
+  onRemove,
+  onCaption,
+}: {
+  g: GalleryItem;
+  onRemove: () => void;
+  onCaption: (c: string) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: g.image_path });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+  return (
+    <div ref={setNodeRef} style={style} className="hairline overflow-hidden group">
+      <div className="aspect-square relative cursor-grab active:cursor-grabbing" {...attributes} {...listeners}>
+        {g.image_url ? (
+          <img src={g.image_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
+        ) : (
+          <div className="absolute inset-0 bg-[#0d2a52]" />
+        )}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove();
+          }}
+          onPointerDown={(e) => e.stopPropagation()}
+          className="absolute top-1 right-1 w-6 h-6 bg-navy/80 hairline text-gold text-xs hover:bg-gold hover:text-navy"
+          aria-label="Supprimer"
+        >
+          ✕
+        </button>
+      </div>
+      <input
+        value={g.caption ?? ""}
+        onChange={(e) => onCaption(e.target.value)}
+        placeholder="Légende…"
+        maxLength={500}
+        className="w-full bg-transparent px-2 py-1 text-[10px] text-offwhite border-t hairline border-x-0 border-b-0 focus:outline-none focus:text-gold"
+      />
+    </div>
   );
 }
 

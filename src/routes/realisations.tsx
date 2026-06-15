@@ -46,6 +46,7 @@ function Realisations() {
     category: r.category as string,
     description: r.description ?? null,
     image_url: r.image_url,
+    gallery: (r as any).gallery ?? [],
   }));
 
   return (

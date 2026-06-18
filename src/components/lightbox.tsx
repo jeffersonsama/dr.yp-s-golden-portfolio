@@ -1,5 +1,7 @@
 import { useEffect, useCallback, useState } from "react";
 
+const isVideo = (u?: string | null) => !!u && /\.(mp4|webm|mov|m4v|qt)(\?|$)/i.test(u);
+
 export type LightboxItem = {
   id: string;
   title: string;

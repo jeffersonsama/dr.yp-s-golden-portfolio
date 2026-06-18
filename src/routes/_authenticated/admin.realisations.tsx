@@ -370,6 +370,7 @@ function RealisationForm({
     date_year: initial.date_year ?? new Date().getFullYear(),
   });
   const [preview, setPreview] = useState<string | null>(initial.image_url ?? null);
+  const [mainIsVideo, setMainIsVideo] = useState<boolean>(isVideoUrl(initial.image_path ?? initial.image_url));
   const [gallery, setGallery] = useState<GalleryItem[]>(initial.gallery ?? []);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -382,7 +383,8 @@ function RealisationForm({
       const path = await uploadOne(file);
       setForm((f) => ({ ...f, image_path: path }));
       setPreview(URL.createObjectURL(file));
-      toast.success("Image principale téléversée.");
+      setMainIsVideo(file.type.startsWith("video/"));
+      toast.success("Média principal téléversé.");
     } catch (e: any) {
       toast.error(e?.message ?? "Échec de l'upload");
     } finally {

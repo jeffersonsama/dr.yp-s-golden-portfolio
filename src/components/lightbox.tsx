@@ -129,7 +129,11 @@ export function Lightbox({
                   className={`w-14 h-14 hairline overflow-hidden ${i === imgIdx ? "border-gold ring-1 ring-gold" : "opacity-60 hover:opacity-100"}`}
                   aria-label={`Image ${i + 1}`}
                 >
-                  {img.url && <img src={img.url} alt="" className="w-full h-full object-cover" />}
+                  {img.url && (isVideo(img.url) ? (
+                    <video src={img.url} className="w-full h-full object-cover" muted playsInline />
+                  ) : (
+                    <img src={img.url} alt="" className="w-full h-full object-cover" />
+                  ))}
                 </button>
               ))}
             </div>

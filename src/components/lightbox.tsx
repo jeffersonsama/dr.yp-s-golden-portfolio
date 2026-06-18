@@ -88,11 +88,20 @@ export function Lightbox({
 
         <figure className="max-w-5xl w-full text-center">
           {currentImg?.url ? (
-            <img
-              src={currentImg.url}
-              alt={item.title}
-              className="mx-auto max-h-[60vh] w-auto object-contain hairline"
-            />
+            isVideo(currentImg.url) ? (
+              <video
+                src={currentImg.url}
+                controls
+                playsInline
+                className="mx-auto max-h-[70vh] w-auto hairline bg-black"
+              />
+            ) : (
+              <img
+                src={currentImg.url}
+                alt={item.title}
+                className="mx-auto max-h-[60vh] w-auto object-contain hairline"
+              />
+            )
           ) : (
             <div className="aspect-square w-full max-w-md mx-auto hairline flex items-center justify-center text-muted-foreground">
               Aucune image

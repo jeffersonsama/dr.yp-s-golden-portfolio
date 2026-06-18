@@ -283,7 +283,11 @@ function SortableRow({
       </td>
       <td className="p-4">
         {r.image_url ? (
-          <img src={r.image_url} alt="" className="w-14 h-14 object-cover hairline" />
+          isVideoUrl(r.image_path) || isVideoUrl(r.image_url) ? (
+            <video src={r.image_url} className="w-14 h-14 object-cover hairline" muted playsInline />
+          ) : (
+            <img src={r.image_url} alt="" className="w-14 h-14 object-cover hairline" />
+          )
         ) : (
           <div className="w-14 h-14 bg-[#0d2a52] hairline" />
         )}

@@ -320,16 +320,31 @@ function SortableRow({
   );
 }
 
+const ACCEPTED_IMAGE = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif"];
+const ACCEPTED_VIDEO = ["video/mp4", "video/webm", "video/quicktime", "video/x-m4v"];
+const ACCEPT_ATTR = [...ACCEPTED_IMAGE, ...ACCEPTED_VIDEO].join(",");
+const MAX_IMAGE_BYTES = 50 * 1024 * 1024; // 50 Mo
+const MAX_VIDEO_BYTES = 500 * 1024 * 1024; // 500 Mo
+
+export function isVideoUrl(u?: string | null) {
+  return !!u && /\.(mp4|webm|mov|m4v|qt)(\?|$)/i.test(u);
+}
+
 async function uploadOne(file: File, prefix = "") {
-  if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-    throw new Error("Format JPG, PNG ou WEBP requis.");
+  const isVideo = file.type.startsWith("video/") || ACCEPTED_VIDEO.includes(file.type);
+  const isImage = file.type.startsWith("image/") || ACCEPTED_IMAGE.includes(file.type);
+  if (!isVideo && !isImage) {
+    throw new Error("Format non supporté (images ou vidéos uniquement).");
   }
-  if (file.size > 5 * 1024 * 1024) {
-    throw new Error("Maximum 5 Mo par image.");
+  const limit = isVideo ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES;
+  if (file.size > limit) {
+    throw new Error(`Fichier trop volumineux (max ${Math.round(limit / 1024 / 1024)} Mo).`);
   }
-  const ext = file.name.split(".").pop();
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? (isVideo ? "mp4" : "jpg");
   const path = `${prefix}${crypto.randomUUID()}.${ext}`;
-  const { error } = await supabase.storage.from("portfolio").upload(path, file, { upsert: false });
+  const { error } = await supabase.storage
+    .from("portfolio")
+    .upload(path, file, { upsert: false, contentType: file.type || undefined });
   if (error) throw error;
   return path;
 }

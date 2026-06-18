@@ -442,18 +442,22 @@ function RealisationForm({
 
         <div className="grid md:grid-cols-2 gap-6">
           <div>
-            <span className="block text-[10px] uppercase tracking-[0.3em] text-muted-foreground mb-2">Image principale</span>
+            <span className="block text-[10px] uppercase tracking-[0.3em] text-muted-foreground mb-2">Média principal</span>
             <label className="aspect-square hairline border-dashed flex items-center justify-center cursor-pointer relative overflow-hidden">
               {preview ? (
-                <img src={preview} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                isVideoUrl(form.image_path) || preview.startsWith("blob:") && mainIsVideo ? (
+                  <video src={preview} className="absolute inset-0 w-full h-full object-cover" muted playsInline />
+                ) : (
+                  <img src={preview} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                )
               ) : (
                 <span className="text-xs text-muted-foreground text-center px-4">
-                  {uploading ? "Téléversement…" : "Cliquer (JPG/PNG/WEBP, 5 Mo max)"}
+                  {uploading ? "Téléversement…" : "Cliquer — image 50 Mo / vidéo 500 Mo max"}
                 </span>
               )}
               <input
                 type="file"
-                accept="image/jpeg,image/png,image/webp"
+                accept={ACCEPT_ATTR}
                 onChange={(e) => e.target.files?.[0] && onMainFile(e.target.files[0])}
                 className="absolute inset-0 opacity-0 cursor-pointer"
               />

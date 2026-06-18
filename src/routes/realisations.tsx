@@ -85,11 +85,22 @@ function Realisations() {
                   aria-label={`Voir ${r.title}`}
                 >
                   {r.image_url ? (
-                    <img
-                      src={r.image_url}
-                      alt={r.title}
-                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                    />
+                    /\.(mp4|webm|mov|m4v|qt)(\?|$)/i.test(r.image_url) ? (
+                      <video
+                        src={r.image_url}
+                        muted
+                        playsInline
+                        loop
+                        preload="metadata"
+                        className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                      />
+                    ) : (
+                      <img
+                        src={r.image_url}
+                        alt={r.title}
+                        className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                      />
+                    )
                   ) : (
                     <div className="absolute inset-0 flex items-center justify-center bg-[#0d2a52]">
                       <Logo className="text-5xl opacity-20" />

@@ -447,7 +447,7 @@ function RealisationForm({
             <span className="block text-[10px] uppercase tracking-[0.3em] text-muted-foreground mb-2">Média principal</span>
             <label className="aspect-square hairline border-dashed flex items-center justify-center cursor-pointer relative overflow-hidden">
               {preview ? (
-                isVideoUrl(form.image_path) || preview.startsWith("blob:") && mainIsVideo ? (
+                mainIsVideo || isVideoUrl(form.image_path) ? (
                   <video src={preview} className="absolute inset-0 w-full h-full object-cover" muted playsInline />
                 ) : (
                   <img src={preview} alt="" className="absolute inset-0 w-full h-full object-cover" />

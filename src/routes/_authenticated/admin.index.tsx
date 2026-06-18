@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { AdminShell, AdminPageHeader } from "@/components/admin-shell";
 import { adminDashboardStats } from "@/lib/portfolio.functions";
 
-export const Route = createFileRoute("/_authenticated/admin")({
+export const Route = createFileRoute("/_authenticated/admin/")({
   head: () => ({
     meta: [
       { title: "Tableau de bord — Admin dr.yp" },

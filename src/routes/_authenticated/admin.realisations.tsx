@@ -283,7 +283,11 @@ function SortableRow({
       </td>
       <td className="p-4">
         {r.image_url ? (
-          <img src={r.image_url} alt="" className="w-14 h-14 object-cover hairline" />
+          isVideoUrl(r.image_path) || isVideoUrl(r.image_url) ? (
+            <video src={r.image_url} className="w-14 h-14 object-cover hairline" muted playsInline />
+          ) : (
+            <img src={r.image_url} alt="" className="w-14 h-14 object-cover hairline" />
+          )
         ) : (
           <div className="w-14 h-14 bg-[#0d2a52] hairline" />
         )}
@@ -320,16 +324,31 @@ function SortableRow({
   );
 }
 
+const ACCEPTED_IMAGE = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif"];
+const ACCEPTED_VIDEO = ["video/mp4", "video/webm", "video/quicktime", "video/x-m4v"];
+const ACCEPT_ATTR = [...ACCEPTED_IMAGE, ...ACCEPTED_VIDEO].join(",");
+const MAX_IMAGE_BYTES = 50 * 1024 * 1024; // 50 Mo
+const MAX_VIDEO_BYTES = 500 * 1024 * 1024; // 500 Mo
+
+export function isVideoUrl(u?: string | null) {
+  return !!u && /\.(mp4|webm|mov|m4v|qt)(\?|$)/i.test(u);
+}
+
 async function uploadOne(file: File, prefix = "") {
-  if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-    throw new Error("Format JPG, PNG ou WEBP requis.");
+  const isVideo = file.type.startsWith("video/") || ACCEPTED_VIDEO.includes(file.type);
+  const isImage = file.type.startsWith("image/") || ACCEPTED_IMAGE.includes(file.type);
+  if (!isVideo && !isImage) {
+    throw new Error("Format non supporté (images ou vidéos uniquement).");
   }
-  if (file.size > 5 * 1024 * 1024) {
-    throw new Error("Maximum 5 Mo par image.");
+  const limit = isVideo ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES;
+  if (file.size > limit) {
+    throw new Error(`Fichier trop volumineux (max ${Math.round(limit / 1024 / 1024)} Mo).`);
   }
-  const ext = file.name.split(".").pop();
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? (isVideo ? "mp4" : "jpg");
   const path = `${prefix}${crypto.randomUUID()}.${ext}`;
-  const { error } = await supabase.storage.from("portfolio").upload(path, file, { upsert: false });
+  const { error } = await supabase.storage
+    .from("portfolio")
+    .upload(path, file, { upsert: false, contentType: file.type || undefined });
   if (error) throw error;
   return path;
 }
@@ -355,6 +374,7 @@ function RealisationForm({
     date_year: initial.date_year ?? new Date().getFullYear(),
   });
   const [preview, setPreview] = useState<string | null>(initial.image_url ?? null);
+  const [mainIsVideo, setMainIsVideo] = useState<boolean>(isVideoUrl(initial.image_path ?? initial.image_url));
   const [gallery, setGallery] = useState<GalleryItem[]>(initial.gallery ?? []);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -367,7 +387,8 @@ function RealisationForm({
       const path = await uploadOne(file);
       setForm((f) => ({ ...f, image_path: path }));
       setPreview(URL.createObjectURL(file));
-      toast.success("Image principale téléversée.");
+      setMainIsVideo(file.type.startsWith("video/"));
+      toast.success("Média principal téléversé.");
     } catch (e: any) {
       toast.error(e?.message ?? "Échec de l'upload");
     } finally {
@@ -376,8 +397,8 @@ function RealisationForm({
   };
 
   const onGalleryFiles = async (files: FileList) => {
-    if (gallery.length + files.length > 20) {
-      toast.error("Maximum 20 images dans la galerie.");
+    if (gallery.length + files.length > 50) {
+      toast.error("Maximum 50 fichiers dans la galerie.");
       return;
     }
     setUploading(true);
@@ -427,18 +448,22 @@ function RealisationForm({
 
         <div className="grid md:grid-cols-2 gap-6">
           <div>
-            <span className="block text-[10px] uppercase tracking-[0.3em] text-muted-foreground mb-2">Image principale</span>
+            <span className="block text-[10px] uppercase tracking-[0.3em] text-muted-foreground mb-2">Média principal</span>
             <label className="aspect-square hairline border-dashed flex items-center justify-center cursor-pointer relative overflow-hidden">
               {preview ? (
-                <img src={preview} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                mainIsVideo || isVideoUrl(form.image_path) ? (
+                  <video src={preview} className="absolute inset-0 w-full h-full object-cover" muted playsInline />
+                ) : (
+                  <img src={preview} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                )
               ) : (
                 <span className="text-xs text-muted-foreground text-center px-4">
-                  {uploading ? "Téléversement…" : "Cliquer (JPG/PNG/WEBP, 5 Mo max)"}
+                  {uploading ? "Téléversement…" : "Cliquer — image 50 Mo / vidéo 500 Mo max"}
                 </span>
               )}
               <input
                 type="file"
-                accept="image/jpeg,image/png,image/webp"
+                accept={ACCEPT_ATTR}
                 onChange={(e) => e.target.files?.[0] && onMainFile(e.target.files[0])}
                 className="absolute inset-0 opacity-0 cursor-pointer"
               />
@@ -524,13 +549,13 @@ function RealisationForm({
         <div className="pt-4 border-t hairline border-x-0 border-b-0">
           <div className="flex items-center justify-between mb-3">
             <span className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
-              Galerie supplémentaire ({gallery.length}/20)
+              Galerie supplémentaire ({gallery.length}/50) — images & vidéos
             </span>
             <label className="hairline px-3 py-2 text-[10px] uppercase tracking-[0.25em] text-gold hover:bg-gold hover:text-navy cursor-pointer">
-              + Ajouter des images
+              + Ajouter des fichiers
               <input
                 type="file"
-                accept="image/jpeg,image/png,image/webp"
+                accept={ACCEPT_ATTR}
                 multiple
                 onChange={(e) => e.target.files && onGalleryFiles(e.target.files)}
                 className="hidden"
@@ -594,7 +619,11 @@ function GalleryTile({
     <div ref={setNodeRef} style={style} className="hairline overflow-hidden group">
       <div className="aspect-square relative cursor-grab active:cursor-grabbing" {...attributes} {...listeners}>
         {g.image_url ? (
-          <img src={g.image_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
+          isVideoUrl(g.image_path) || isVideoUrl(g.image_url) ? (
+            <video src={g.image_url} className="absolute inset-0 w-full h-full object-cover" muted playsInline />
+          ) : (
+            <img src={g.image_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
+          )
         ) : (
           <div className="absolute inset-0 bg-[#0d2a52]" />
         )}

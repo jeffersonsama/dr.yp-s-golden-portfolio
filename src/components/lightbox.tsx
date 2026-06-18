@@ -1,5 +1,7 @@
 import { useEffect, useCallback, useState } from "react";
 
+const isVideo = (u?: string | null) => !!u && /\.(mp4|webm|mov|m4v|qt)(\?|$)/i.test(u);
+
 export type LightboxItem = {
   id: string;
   title: string;
@@ -86,11 +88,20 @@ export function Lightbox({
 
         <figure className="max-w-5xl w-full text-center">
           {currentImg?.url ? (
-            <img
-              src={currentImg.url}
-              alt={item.title}
-              className="mx-auto max-h-[60vh] w-auto object-contain hairline"
-            />
+            isVideo(currentImg.url) ? (
+              <video
+                src={currentImg.url}
+                controls
+                playsInline
+                className="mx-auto max-h-[70vh] w-auto hairline bg-black"
+              />
+            ) : (
+              <img
+                src={currentImg.url}
+                alt={item.title}
+                className="mx-auto max-h-[60vh] w-auto object-contain hairline"
+              />
+            )
           ) : (
             <div className="aspect-square w-full max-w-md mx-auto hairline flex items-center justify-center text-muted-foreground">
               Aucune image
@@ -118,7 +129,11 @@ export function Lightbox({
                   className={`w-14 h-14 hairline overflow-hidden ${i === imgIdx ? "border-gold ring-1 ring-gold" : "opacity-60 hover:opacity-100"}`}
                   aria-label={`Image ${i + 1}`}
                 >
-                  {img.url && <img src={img.url} alt="" className="w-full h-full object-cover" />}
+                  {img.url && (isVideo(img.url) ? (
+                    <video src={img.url} className="w-full h-full object-cover" muted playsInline />
+                  ) : (
+                    <img src={img.url} alt="" className="w-full h-full object-cover" />
+                  ))}
                 </button>
               ))}
             </div>

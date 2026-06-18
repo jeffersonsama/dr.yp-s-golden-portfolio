@@ -545,13 +545,13 @@ function RealisationForm({
         <div className="pt-4 border-t hairline border-x-0 border-b-0">
           <div className="flex items-center justify-between mb-3">
             <span className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
-              Galerie supplémentaire ({gallery.length}/20)
+              Galerie supplémentaire ({gallery.length}/50) — images & vidéos
             </span>
             <label className="hairline px-3 py-2 text-[10px] uppercase tracking-[0.25em] text-gold hover:bg-gold hover:text-navy cursor-pointer">
-              + Ajouter des images
+              + Ajouter des fichiers
               <input
                 type="file"
-                accept="image/jpeg,image/png,image/webp"
+                accept={ACCEPT_ATTR}
                 multiple
                 onChange={(e) => e.target.files && onGalleryFiles(e.target.files)}
                 className="hidden"

@@ -391,8 +391,8 @@ function RealisationForm({
   };
 
   const onGalleryFiles = async (files: FileList) => {
-    if (gallery.length + files.length > 20) {
-      toast.error("Maximum 20 images dans la galerie.");
+    if (gallery.length + files.length > 50) {
+      toast.error("Maximum 50 fichiers dans la galerie.");
       return;
     }
     setUploading(true);

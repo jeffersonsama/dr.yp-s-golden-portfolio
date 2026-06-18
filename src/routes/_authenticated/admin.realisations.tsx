@@ -615,7 +615,11 @@ function GalleryTile({
     <div ref={setNodeRef} style={style} className="hairline overflow-hidden group">
       <div className="aspect-square relative cursor-grab active:cursor-grabbing" {...attributes} {...listeners}>
         {g.image_url ? (
-          <img src={g.image_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
+          isVideoUrl(g.image_path) || isVideoUrl(g.image_url) ? (
+            <video src={g.image_url} className="absolute inset-0 w-full h-full object-cover" muted playsInline />
+          ) : (
+            <img src={g.image_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
+          )
         ) : (
           <div className="absolute inset-0 bg-[#0d2a52]" />
         )}

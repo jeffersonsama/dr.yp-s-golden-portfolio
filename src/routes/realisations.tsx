@@ -81,7 +81,7 @@ function Realisations() {
                 <button
                   key={r.id}
                   onClick={() => setLbIndex(i)}
-                  className="group relative aspect-square hairline overflow-hidden text-left"
+                  className="group relative aspect-square hairline overflow-hidden text-left bg-black"
                   aria-label={`Voir ${r.title}`}
                 >
                   {r.image_url ? (
@@ -92,17 +92,17 @@ function Realisations() {
                         playsInline
                         loop
                         preload="metadata"
-                        className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                        className="absolute inset-0 w-full h-full object-contain group-hover:scale-105 transition-transform duration-700"
                       />
                     ) : (
                       <img
                         src={r.image_url}
                         alt={r.title}
-                        className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                        className="absolute inset-0 w-full h-full object-contain group-hover:scale-105 transition-transform duration-700"
                       />
                     )
                   ) : (
-                    <div className="absolute inset-0 flex items-center justify-center bg-[#0d2a52]">
+                    <div className="absolute inset-0 flex items-center justify-center bg-black">
                       <Logo className="text-5xl opacity-20" />
                     </div>
                   )}
